@@ -8,24 +8,22 @@ from geometry_msgs.msg import Twist
 from rclpy.node import Node
 
 import interfaces
-from interfaces.msg import Object
+from interfaces.msg import Object, Objects
 
 
 class Navigation(Node):
     def __init__(self):
         super().__init__("Navigation")
 
-        self.subscriber = self.create_subscription(Object, "objects", self._objects_callback, 10)
-        self.publisher_ = self.create_publisher(Twist, "rbt_vel", 10)
+        self.subscriber = self.create_subscription(Objects, "objects", self._objects_callback, 10)
+        self.pub_surveillance_ = self.create_publisher(Objects, "state_surveillance", 10)
+        self.pub_guard = self.create_publisher(Objects, "state_guard", 10)
+        self.pub_home = self.create_publisher(Objects, "state_home", 10)
 
     def _objects_callback(self, msg):
-        # Do something with the objects, then send robot velocity
+        # Do something with the objects, then send objects to correct node
 
-        twist_msg = Twist()
-        twist_msg.linear.x = 1
-        twist_msg.angular.y = 0
-        twist_msg.angular.z = 0
-        self.publisher_.publish(twist_msg)
+        self.pub_surveillance_.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)

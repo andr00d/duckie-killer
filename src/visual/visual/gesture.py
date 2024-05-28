@@ -10,7 +10,7 @@ class Gesture(Node):
         super().__init__("gesture")
 
         self.timer = self.create_timer(self.timer_period, self._gesture_callback)
-        self.publisher_ = self.create_publisher(Object, "objects", 10)
+        self.publisher_ = self.create_publisher(Objects, "objects", 10)
 
     def _gesture_callback(self):
         object_msg = Object()
@@ -19,7 +19,10 @@ class Gesture(Node):
         object_msg.x_w = 1
         object_msg.y_w = 1
         object_msg.type = "test"
-        self.publisher_.publish(object_msg)
+
+        objects_msg = Objects()
+        objects_msg.objects = [object_msg]
+        self.publisher_.publish(objects_msg)
 
 
 def main(args=None):

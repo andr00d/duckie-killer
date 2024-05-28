@@ -26,6 +26,10 @@ setup(
         'console_scripts': [
             "navigation = navigation.navigation:main",
             "rover = navigation.rover:main",
+
+            "guard = navigation.guard:main",
+            "home = navigation.home:main",
+            "surveillance = navigation.surveillance:main",
         ],
     },
 )
