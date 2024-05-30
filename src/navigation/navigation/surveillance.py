@@ -14,9 +14,9 @@ class Surveillance(Node):
     def _surveillance_callback(self, msg):
         #do something with input, then send vel to robot.
         twist_msg = Twist()
-        twist_msg.linear.x = 1
-        twist_msg.angular.y = 0
-        twist_msg.angular.z = 0
+        twist_msg.linear.x = 1.0
+        twist_msg.angular.y = 0.0
+        twist_msg.angular.z = 0.0
 
         self.publisher_.publish(twist_msg)
 
