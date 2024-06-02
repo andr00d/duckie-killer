@@ -4,3 +4,5 @@ mediapipe
 collection
 torch
 matplotlib
+inference_sdk
+supervision
