@@ -14,7 +14,7 @@ class Rover(Node):
         if(not (msg.linear.x == 0.0 and msg.angular.y == 0.0 and msg.angular.z == 0.0)):
             
             rbt_msg = Twist()
-            rbt_msg.linear.x = msg.linear.y
+            rbt_msg.linear.x = msg.linear.x
             rbt_msg.angular.y = msg.angular.y
             rbt_msg.angular.z = msg.angular.z
             

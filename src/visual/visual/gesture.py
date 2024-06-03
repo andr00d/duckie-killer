@@ -17,9 +17,9 @@ class Gesture(Node):
         object_msg = Object()
         object_msg.x = 1.0
         object_msg.y = 1.0
-        object_msg.x_width = 1.0
-        object_msg.y_width = 1.0
-        object_msg.type = "test"
+        object_msg.width = 1.0
+        object_msg.height = 1.0
+        object_msg.type = "cone"
 
         objects_msg = Objects()
         objects_msg.objects = [object_msg]

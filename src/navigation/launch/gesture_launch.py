@@ -24,7 +24,7 @@ def generate_launch_description():
 
             Node(package="navigation", executable="guard", output="screen"),
             Node(package="navigation", executable="home", output="screen"),
-            Node(package="navigation", executable="surveillance", output="screen"),
+            Node(package="navigation", executable="surveillance", output="screen", parameters=[params]),
 
             # Node(package="navigation", executable="navigation", output="screen", parameters=[comm_params]),
             # Node(package="navigation", executable="rover", output="screen", parameters=[comm_params]),
