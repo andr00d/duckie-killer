@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+Object.msg
+float64 x
+float64 y
+float64 width
+float64 height
+string type
+///////////////
+Objects.msg
+Object[] objects
+"""
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
@@ -17,6 +28,7 @@ class Home(Node):
         self.subscriber = self.create_subscription(Objects, 'state_home', self._home_callback, 10)
         self.publisher_ = self.create_publisher(Twist, "/rbt_vel", 10)
         self.home_detected = False
+        # self.home_lost = False => this will require an odometer data to draw a path
         self.home_bbox = None
         # PID controller variables
         self.prev_e = 0.0
@@ -29,7 +41,9 @@ class Home(Node):
     
     def _home_callback(self, msg):
         twist_msg = Twist()
-        
+
+        self.home_detected, self.home_bbox = self.find_home(msg.objects) # look for home each msg
+
         if not self.home_detected:
             self.home_detected, self.home_bbox = self.find_home(msg.objects)
             if not self.home_detected:
@@ -49,14 +63,30 @@ class Home(Node):
     def find_home(self, objects):
         for obj in objects:
             if obj.type == HOME_CLASS_ID: # find cone
-                return True, obj
+                return True, (obj.x, obj.y, obj.width, obj.height)
         return False, None
 
     def check_path_to_home(self, objects):
+        """
+        Check if the path is clear. In case the home_bbx is still in the frame but the path is blocked.
+        """
         for obj in objects:
-            if obj.class_id != HOME_CLASS_ID and self.bbox_overlap(self.home_bbox, obj.bbox):
+            obj.obstacle_bbox = (obj.x, obj.y, obj.width, obj.height)
+            if obj.type != HOME_CLASS_ID and self.bbox_overlap(self.home_bbox, obj.obstacle_bbox):
                 return False
         return True
+    
+    def bbox_overlap(self, home_bbox, obstacle_bbox):
+        # IoU mertrics for the overlap 
+        intersection_area = max(0, min(home_bbox.xmax, obstacle_bbox.xmax) - max(home_bbox.xmin, obstacle_bbox.xmin)) * \
+                            max(0, min(home_bbox.ymax, obstacle_bbox.ymax) - max(home_bbox.ymin, obstacle_bbox.ymin))
+
+        home_bbox_area = (home_bbox.xmax - home_bbox.xmin) * (home_bbox.ymax - home_bbox.ymin)
+        obstacle_bbox_area = (obstacle_bbox.xmax - obstacle_bbox.xmin) * (obstacle_bbox.ymax - obstacle_bbox.ymin)
+
+        iou = intersection_area / (home_bbox_area + obstacle_bbox_area - intersection_area)
+
+        return iou > 0.4
 
     def centerline_allignment(self, bbox):
         # calculate the centerline allignment
@@ -71,20 +101,8 @@ class Home(Node):
         if home_bbox_area / frame_area > 0.8:
             return 0.0, 0.0
 
-        # Control the velocity based on the ratio
-        v_0, omega = self.velocity_control(home_bbox_area, frame_area, home_centerline, frame_centerline)
-
-        return v_0, omega
-
-    def velocity_control(self, home_bbox_area, frame_area, home_centerline, frame_centerline):
-        bbox_to_screen_ratio = home_bbox_area / frame_area
-
-        if bbox_to_screen_ratio < .2: # until the bbox is less then 20% of screen the speed is const
-            v_0 = 1.0  # Keep the velocity constant when the robot is far from home
-        elif .2 <= bbox_to_screen_ratio < .8:
-            v_0 = 1.0 - (bbox_to_screen_ratio - .2) / (.8 - .2)  # decrease vel prop. to the bbox ratio
-        else:
-            v_0 = 0.0 
+        # Keep the linear velocity constant
+        v = 0.1
 
         # PID controller to align the frame_centerline with the home_centerline
         omega, self.prev_e, self.prev_int = self.PIDController(
@@ -94,8 +112,8 @@ class Home(Node):
             prev_int=self.prev_int,
             delta_t=self.delta_t
         )
-    
-        return v_0, omega
+
+        return v, omega
 
     def PIDController(
         self,
