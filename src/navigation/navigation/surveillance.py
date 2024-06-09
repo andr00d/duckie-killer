@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, Pose
 from ament_index_python.packages import get_package_share_directory
+from tf_transformations import euler_from_quaternion
 from interfaces.msg import Object, Objects
+from nav_msgs.msg import Odometry
+import numpy as np
 from playsound import playsound
 import random
 import time
 import os
 
 class SurveilState:
+    STARTING = 0
     PATROLLING = 1
     FOLLOWING = 2
     BARKING = 3
@@ -21,6 +25,7 @@ sounds = [
     [1.0, os.path.join(pkg_dir, "sounds/scream_2.mp3")],
 ]
 
+
 class Surveillance(Node):
     def __init__(self):
         super().__init__("Surveillance")
@@ -29,31 +34,97 @@ class Surveillance(Node):
             namespace="",
             parameters=[
                 ("bark_delay", rclpy.Parameter.Type.INTEGER),
+                ("move_radius", rclpy.Parameter.Type.DOUBLE),
             ],
         )
         import os
 
-        self.get_logger().info('getcwd:      ' + os.getcwd())
-        self.get_logger().info('__file__:    ' + __file__)
-
         self.subscriber = self.create_subscription(Objects, 'state_surveillance', self._surveillance_callback, 10)
+        self.odom_sub = self.create_subscription(Odometry, '/odometry/wheels', self._odom_callback, 10)
         self.publisher_ = self.create_publisher(Twist, "/rbt_vel", 10)
 
         self.bark_delay = (self.get_parameter("bark_delay").get_parameter_value().integer_value)
-        self.state = SurveilState.PATROLLING
+        self.move_radius = (self.get_parameter("move_radius").get_parameter_value().double_value)
         self.last_bark_time = time.time()
         self.MAX_BBOX_AREA = 0.1
         
+        self.state = SurveilState.STARTING
+        self.round_index = 0
+        self.last_odom = Odometry()
+        self.center_pos = Pose()
+        
+    def _odom_callback(self, msg):
+        self.last_odom = msg
+
+    def _drive_to_pos(self, msg, current_pos, goal_pos):
+            dist_x = goal_pos.position.x - current_pos.position.x
+            dist_y = goal_pos.position.y - current_pos.position.y
+            distance = np.hypot(dist_x, dist_y)
+
+            diff_angle = np.arctan2(dist_y, dist_x)
+
+            quaternion = [current_pos.orientation.x, current_pos.orientation.y, 
+                          current_pos.orientation.z, current_pos.orientation.w]
+            roll, pitch, yaw = euler_from_quaternion(quaternion)
+            # self.get_logger().info("{} - {}".format(yaw,  diff_angle))
+            # self.get_logger().info("dist = {} - {}".format(dist_x, dist_y))
+            # self.get_logger().info("pos = {} - {}".format( current_pos.position.x,  current_pos.position.y))
+            # self.get_logger().info("goal = {} - {}".format( goal_pos.position.x,  goal_pos.position.y))
+            # self.get_logger().info("{}: distance = {}".format(self.round_index, distance))
+
+            if(abs(yaw - diff_angle) > .2):
+                # minimize rotation
+                rot_dir = (diff_angle - yaw) / abs((diff_angle - yaw))
+                if abs(yaw - diff_angle) < 1.9*np.pi:
+                    if abs(yaw - diff_angle) > 1.5*np.pi:
+                        rot_dir = -rot_dir
+                    msg.angular.z = 0.5 * rot_dir
+                    return msg, False
+
+            if(distance < .15):
+                return msg, True
+
+            msg.linear.x = 0.6
+            return msg, False
+
     def _surveillance_callback(self, msgs):
         # if message received consists out of a hand, it means state is switched, and we can reset surveillance state
         if msgs.objects[0].type in ["hands"]:
-            self.state = PATROLLING
+            self.round_index = 0
+            self.state = SurveilState.STARTING
+            self.get_logger().info("stopping surveillance.")
             return
 
         twist_msg = Twist()
         twist_msg.linear.x = 0.0
-        twist_msg.angular.y = 0.0
+        twist_msg.angular.y = 0.0 # not useful, remove in future
         twist_msg.angular.z = 0.0
+
+        ######################################
+
+        if(self.state == SurveilState.STARTING):
+            self.center_pos = self.last_odom.pose.pose
+            
+            self.corners = []
+            for offset in [[self.move_radius,  self.move_radius], 
+                           [-self.move_radius, self.move_radius], 
+                           [-self.move_radius, -self.move_radius], 
+                           [self.move_radius,  -self.move_radius]]:
+                corner = Pose()
+                corner.position.x = self.center_pos.position.x + offset[0]
+                corner.position.y = self.center_pos.position.y + offset[1]
+                self.corners.append(corner)
+                
+            self.get_logger().info("current position:")
+            self.get_logger().info("{} - {}".format(self.center_pos.position.x, self.center_pos.position.y))
+            self.get_logger().info("calculated positions for corners:")
+            for i in range(4):
+                self.get_logger().info("{} - {}".format(self.corners[i].position.x, self.corners[i].position.y))
+
+            self.state = SurveilState.PATROLLING
+            self.get_logger().info("starting with surveillance")
+
+        ######################################
 
         if(self.state == SurveilState.PATROLLING):
             cones = [m for m in msgs.objects if m.type == "cone"]
@@ -62,9 +133,9 @@ class Surveillance(Node):
                 self.get_logger().info("found target")
                 return
 
-            # no items found, continuing with surveillance
-            # surveillance is simple rotation for now
-            twist_msg.angular.z = 1.0
+            twist_msg, arrived = self._drive_to_pos(twist_msg, self.last_odom.pose.pose, self.corners[self.round_index])
+            if arrived:
+                self.round_index = (self.round_index + 1) % 4
 
         ######################################
 
@@ -79,6 +150,7 @@ class Surveillance(Node):
             bb_area = cone.width * cone.height
             if bb_area > self.MAX_BBOX_AREA:
                 self.state = SurveilState.BARKING
+                self.last_bark_time = time.time() - 3
                 self.get_logger().info("arrive at target, barking.")
                 self.last_bark_time = time.time()
                 return
@@ -108,10 +180,12 @@ class Surveillance(Node):
         ######################################
 
         elif (self.state == SurveilState.RETURNING):
-            # for now, just assume already at origin  
-            self.state = SurveilState.FOLLOWING   
-            self.get_logger().info("returned to origin")       
-            return
+
+            twist_msg, arrived = self._drive_to_pos(twist_msg, self.last_odom.pose.pose,  self.center_pos)
+            if arrived:
+                self.state = SurveilState.FOLLOWING   
+                self.get_logger().info("returned to origin")       
+                retu
 
         ######################################
                 

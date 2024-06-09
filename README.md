@@ -13,6 +13,10 @@ For the rover setup, execute the `setup_rover,sh` script from the same repositor
 
 Install necessary ROS dependencies by navigating to this repo's `src` directory and executing `rosdep install --from-paths . --ignore-src -r -y`.
 
+furthermore, run the following command to install depenencies necessary for building:  
+```sudo apt-get install ros-humble-tf-transformations```   
+``` pip3 install transforms3d```   
+
 Upon initial download of the repository, execute `colcon build` in `~/GIT/duckie-killer/` to build the system and generate the required setup scripts. 
 
 ### .bashrc and Group Setup
