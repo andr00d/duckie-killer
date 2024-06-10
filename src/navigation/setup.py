@@ -25,7 +25,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "navigation = navigation.navigation:main",
+            "Statehandler = navigation.statehandler:main",
             "rover = navigation.rover:main",
 
             "guard = navigation.guard:main",

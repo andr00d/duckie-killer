@@ -19,7 +19,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             Node(package="visual", executable="gesture", output="screen"),
-            Node(package="navigation", executable="navigation", output="screen"),
+            Node(package="navigation", executable="Statehandler", output="screen"),
             Node(package="navigation", executable="rover", output="screen"),
 
             Node(package="navigation", executable="guard", output="screen"),

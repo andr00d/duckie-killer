@@ -11,9 +11,9 @@ import interfaces
 from interfaces.msg import Object, Objects
 
 
-class Navigation(Node):
+class Statehandler(Node):
     def __init__(self):
-        super().__init__("Navigation")
+        super().__init__("Statehandler")
 
         self.subscriber = self.create_subscription(Objects, "objects", self._objects_callback, 10)
         self.pub_surveillance = self.create_publisher(Objects, "state_surveillance", 10)
@@ -56,7 +56,7 @@ class Navigation(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Navigation()
+    node = Statehandler()
     rclpy.spin(node)
     rclpy.shutdown()
 
