@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import rclpy
 import yaml
@@ -23,36 +21,37 @@ class Statehandler(Node):
         self.curr_state = None
 
     def _objects_callback(self, msgs):
-        self.pub_surveillance.publish(msgs)
-        return
+        # self.pub_surveillance.publish(msgs) # this would exit the callback prematurely
+        # return
+        if not msgs.objects:
+            if self.curr_state is not None:
+                self.curr_state.publish(msgs)
+            return
 
-        gestures = ["gesture_1", "gesture_2"]
-        hands = [m for m in msgs.objects if m.type in gestures]
-        biggest_hand = max(msgs.objects, key=lambda m: m.width * m.height)
+        gesture = [m.gesture for m in msgs.objects]
 
-        if(len(gestures == 0) and self.curr_state != None):
+        if(len(gesture == 0) and self.curr_state != None):
             self.curr_state.publish(msgs)
 
-        if("stop" in [m.type for m in hands.type] and self.curr_state != None):
+        if gesture == "stop" and self.curr_state != None:
             object_msg = Object()
-            object_msg.type = "clear"
+            object_msg.gesture = "clear" 
 
             objects_msg = Objects()
             objects_msg.objects = [object_msg]
-            
+
             self.curr_state.publish(objects_msg)
             self.curr_state = None
 
-        else:
-            if biggest_hand.type == "surveillance":
-                self.curr_state = self.pub_surveillance
-            if biggest_hand.type == "guard":
-                self.curr_state = self.pub_guard
-            if biggest_hand.type == "pub_home":
-                self.curr_state = self.pub_home
+        elif gesture == "surveillance" and self.curr_state is None:
+            self.curr_state = self.pub_surveillance
+        elif gesture == "guard" and self.curr_state is None:
+            self.curr_state = self.pub_guard
+        elif gesture == "pub_home" and self.curr_state is None:
+            self.curr_state = self.pub_home
 
-
-        self.pub_surveillance.publish(msg)
+        if self.curr_state is not None:
+            self.curr_state.publish(msgs)
 
 def main(args=None):
     rclpy.init(args=args)
@@ -63,3 +62,4 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
+
