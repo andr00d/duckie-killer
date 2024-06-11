@@ -101,7 +101,7 @@ class Gesture(Node):
                 object_msg.width = float(x2-x1)
                 object_msg.height = float(y2-y1)
                 object_msg.type = class_name
-                object_msg.gesture = ""
+                object_msg.gesture = self.current_gesture
                 self.gesture_callback(object_msg)
 
 
