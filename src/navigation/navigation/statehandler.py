@@ -27,7 +27,8 @@ class Statehandler(Node):
     def _objects_callback(self, msgs):
         # TODO fix the objects capturing
         gesture = [obj_msg.gesture for obj_msg in msgs.objects]
-        
+        objects_msg = Objects()
+
 
         # if(len(gesture) == 0 and self.curr_state != None):
         #     self.curr_state.publish(msgs)
@@ -38,28 +39,24 @@ class Statehandler(Node):
             object_msg = Object()
             object_msg.gesture = "clear" 
 
-            objects_msg = Objects()
             objects_msg.objects = [object_msg]
             self.pub_surveillance.publish(objects_msg)
             self.pub_guard.publish(objects_msg)
             self.pub_home.publish(objects_msg)
-
-            # self.curr_state.publish(objects_msg)
             self.curr_state = None
             self.get_logger().info("I am in Nothing mode")
-        # TODO bug in the publisher logic
-        # elif gesture[0] == SURV and self.curr_state is None:
-        #     self.curr_state = SURV
-        #     self.pub_surveillance.publish(objects_msg)
-        #     self.get_logger().info("I am in SRUV mode")
-        # elif gesture[0] == GUARD and self.curr_state is None:
-        #     self.curr_state = GUARD
-        #     self.pub_guard.publish(objects_msg)
-        #     self.get_logger().info("I am in GUARD mode")
-        # elif gesture[0] == HOME and self.curr_state is None:
-        #     self.curr_state = HOME
-        #     self.pub_home.publish(objects_msg)
-        #     self.get_logger().info("I am in HOME mode")
+        elif gesture[0] == SURV and self.curr_state is None:
+            self.curr_state = SURV
+            self.pub_surveillance.publish(objects_msg)
+            self.get_logger().info("I am in SRUV mode")
+        elif gesture[0] == GUARD and self.curr_state is None:
+            self.curr_state = GUARD
+            self.pub_guard.publish(objects_msg)
+            self.get_logger().info("I am in GUARD mode")
+        elif gesture[0] == HOME and self.curr_state is None:
+            self.curr_state = HOME
+            self.pub_home.publish(objects_msg)
+            self.get_logger().info("I am in HOME mode")
 
 
 def main(args=None):
