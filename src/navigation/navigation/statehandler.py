@@ -30,7 +30,8 @@ class Statehandler(Node):
 
         gesture = [m.gesture for m in msgs.objects]
 
-        if(len(gesture == 0) and self.curr_state != None):
+        if(len(gesture) == 0 and self.curr_state != None):
+
             self.curr_state.publish(msgs)
 
         if gesture == "stop" and self.curr_state != None:
