@@ -22,41 +22,45 @@ class Statehandler(Node):
         self.pub_guard = self.create_publisher(Objects, "state_guard", 10)
         self.pub_home = self.create_publisher(Objects, "state_home", 10)
 
-        self.curr_state = None
+        self.curr_state = STOP
 
     def _objects_callback(self, msgs):
-        # self.pub_surveillance.publish(msgs) # this would exit the callback prematurely
-        # return
-        if not msgs.objects:
-            if self.curr_state is not None:
-                self.curr_state.publish(msgs)
-            return
+        # TODO fix the objects capturing
+        gesture = [obj_msg.gesture for obj_msg in msgs.objects]
+        
 
-        gesture = [m.gesture for m in msgs.objects]
+        # if(len(gesture) == 0 and self.curr_state != None):
+        #     self.curr_state.publish(msgs)
+        # self.get_logger().info(gesture[0])
+        # self.get_logger().info(f'The initial state: {self.curr_state}')
 
-        if(len(gesture) == 0 and self.curr_state != None):
-
-            self.curr_state.publish(msgs)
-
-        if gesture == STOP and self.curr_state != None:
+        if gesture[0] == STOP and self.curr_state != None:
             object_msg = Object()
             object_msg.gesture = "clear" 
 
             objects_msg = Objects()
             objects_msg.objects = [object_msg]
+            self.pub_surveillance.publish(objects_msg)
+            self.pub_guard.publish(objects_msg)
+            self.pub_home.publish(objects_msg)
 
-            self.curr_state.publish(objects_msg)
+            # self.curr_state.publish(objects_msg)
             self.curr_state = None
+            self.get_logger().info("I am in Nothing mode")
+        # TODO bug in the publisher logic
+        # elif gesture[0] == SURV and self.curr_state is None:
+        #     self.curr_state = SURV
+        #     self.pub_surveillance.publish(objects_msg)
+        #     self.get_logger().info("I am in SRUV mode")
+        # elif gesture[0] == GUARD and self.curr_state is None:
+        #     self.curr_state = GUARD
+        #     self.pub_guard.publish(objects_msg)
+        #     self.get_logger().info("I am in GUARD mode")
+        # elif gesture[0] == HOME and self.curr_state is None:
+        #     self.curr_state = HOME
+        #     self.pub_home.publish(objects_msg)
+        #     self.get_logger().info("I am in HOME mode")
 
-        elif gesture == SURV and self.curr_state is None:
-            self.curr_state = self.pub_surveillance
-        elif gesture == GUARD and self.curr_state is None:
-            self.curr_state = self.pub_guard
-        elif gesture == HOME and self.curr_state is None:
-            self.curr_state = self.pub_home
-
-        if self.curr_state is not None:
-            self.curr_state.publish(msgs)
 
 def main(args=None):
     rclpy.init(args=args)
