@@ -4,15 +4,18 @@ import rclpy
 from rclpy.node import Node
 from interfaces.msg import Object, Objects
 from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import String
 from cv_bridge import CvBridge, CvBridgeError
 from collections import deque
 
 import mediapipe as mp
+from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-from sensor_msgs.msg import CompressedImage
+import torch
+import numpy as np
 
 
 # simple setup for gesture node
@@ -24,6 +27,8 @@ class Gesture(Node):
 
         self.subscription = self.create_subscription(CompressedImage, "cam/compressed", self._cam_callback, 10)
         self.publisher_ = self.create_publisher(Objects, "objects", 10)
+
+        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
         
         self.bridge = CvBridge()
         self.gesture_buffer = deque(maxlen=10)
@@ -37,6 +42,8 @@ class Gesture(Node):
         object_msg.type = ""
         object_msg.gesture = "Open_Palm"
         self.gesture_callback(object_msg)
+
+
 
     def _cam_callback(self, msg):
         object_msg = Object()
@@ -79,6 +86,24 @@ class Gesture(Node):
                     object_msg.gesture = most_common_gesture
                     self.gesture_callback(object_msg)
                     self.current_gesture = most_common_gesture
+        elif self.current_gesture != "Open_Palm":
+            results = self.model(cv_image)
+            
+            # Process detections
+            detected_objects = []
+            for detection in results.xyxy[0].numpy():
+                x1, y1, x2, y2, confidence, class_id = detection
+                class_name = self.model.names[int(class_id)]
+
+                object_msg = Object()
+                object_msg.x = float(x1)
+                object_msg.y = float(y1)
+                object_msg.width = float(x2-x1)
+                object_msg.height = float(y2-y1)
+                object_msg.type = class_name
+                object_msg.gesture = ""
+                self.gesture_callback(object_msg)
+
 
     def gesture_callback(self, object_msg):
         objects_msg = Objects()
