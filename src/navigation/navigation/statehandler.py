@@ -8,6 +8,10 @@ from rclpy.node import Node
 import interfaces
 from interfaces.msg import Object, Objects
 
+STOP = "Open_Palm"
+SURV = "Thumb_Down"
+GUARD = "Thumb_Up"
+HOME = "Closed_Fist"
 
 class Statehandler(Node):
     def __init__(self):
@@ -34,7 +38,7 @@ class Statehandler(Node):
 
             self.curr_state.publish(msgs)
 
-        if gesture == "stop" and self.curr_state != None:
+        if gesture == STOP and self.curr_state != None:
             object_msg = Object()
             object_msg.gesture = "clear" 
 
@@ -44,11 +48,11 @@ class Statehandler(Node):
             self.curr_state.publish(objects_msg)
             self.curr_state = None
 
-        elif gesture == "surveillance" and self.curr_state is None:
+        elif gesture == SURV and self.curr_state is None:
             self.curr_state = self.pub_surveillance
-        elif gesture == "guard" and self.curr_state is None:
+        elif gesture == GUARD and self.curr_state is None:
             self.curr_state = self.pub_guard
-        elif gesture == "pub_home" and self.curr_state is None:
+        elif gesture == HOME and self.curr_state is None:
             self.curr_state = self.pub_home
 
         if self.curr_state is not None:
