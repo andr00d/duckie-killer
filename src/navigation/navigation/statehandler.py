@@ -21,11 +21,8 @@ class Statehandler(Node):
         self.pub_surveillance = self.create_publisher(Objects, "state_surveillance", 10)
         self.pub_guard = self.create_publisher(Objects, "state_guard", 10)
         self.pub_home = self.create_publisher(Objects, "state_home", 10)
-
-        # Set initial state to STOP
         self.curr_state = STOP
 
-        # Publish initial STOP message
         initial_msg = Objects()
         initial_object = Object()
         initial_object.gesture = STOP
