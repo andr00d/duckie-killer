@@ -69,6 +69,7 @@ class Gesture(Node):
 
         recognition_result = recognizer.recognize(mp_image)
 
+        # Process gestures
         if recognition_result.gestures:
             top_gesture = recognition_result.gestures[0][0]
             self.gesture_buffer.append(top_gesture.category_name)
@@ -76,6 +77,7 @@ class Gesture(Node):
             most_common_gesture = max(set(self.gesture_buffer), key=self.gesture_buffer.count)
 
             if most_common_gesture == "Open_Palm" or self.current_gesture == "Open_Palm":
+                # Publish the gesture (no coordiates)
                 if most_common_gesture in ("Open_Palm", "Thumb_Up", "Thumb_Down", "Closed_Fist"):
                     object_msg = Object()
                     object_msg.x = 0.0
@@ -86,23 +88,51 @@ class Gesture(Node):
                     object_msg.gesture = most_common_gesture
                     self.gesture_callback(object_msg)
                     self.current_gesture = most_common_gesture
+        
+        # Process detections            
         elif self.current_gesture != "Open_Palm":
-            results = self.model(cv_image)
             
-            # Process detections
+            # Use YOLOv5 to detect objects
+            results = self.model(cv_image)
             detected_objects = []
             for detection in results.xyxy[0].numpy():
                 x1, y1, x2, y2, confidence, class_id = detection
                 class_name = self.model.names[int(class_id)]
 
-                object_msg = Object()
-                object_msg.x = float(x1)
-                object_msg.y = float(y1)
-                object_msg.width = float(x2-x1)
-                object_msg.height = float(y2-y1)
-                object_msg.type = class_name
-                object_msg.gesture = self.current_gesture
-                self.gesture_callback(object_msg)
+                # Publish the object (no gestures)
+                if self.current_gesture == "Closed_Fist":  # Home
+                    if class_name == "chair":
+                        object_msg = Object()
+                        object_msg.x = float(x1)
+                        object_msg.y = float(y1)
+                        object_msg.width = float(x2-x1)
+                        object_msg.height = float(y2-y1)
+                        object_msg.type = class_name
+                        object_msg.gesture = ""
+                        self.gesture_callback(object_msg)
+
+                elif self.current_gesture == "Thumb_Up":  # Guard
+                    if class_name == "person":
+                        object_msg = Object()
+                        object_msg.x = float(x1)
+                        object_msg.y = float(y1)
+                        object_msg.width = float(x2-x1)
+                        object_msg.height = float(y2-y1)
+                        object_msg.type = class_name
+                        object_msg.gesture = ""
+                        self.gesture_callback(object_msg)
+
+
+                elif self.current_gesture == "Thumb_Down":  # Surveillance
+                    if class_name == "chair":
+                        object_msg = Object()
+                        object_msg.x = float(x1)
+                        object_msg.y = float(y1)
+                        object_msg.width = float(x2-x1)
+                        object_msg.height = float(y2-y1)
+                        object_msg.type = class_name
+                        object_msg.gesture = ""
+                        self.gesture_callback(object_msg)
 
 
     def gesture_callback(self, object_msg):
