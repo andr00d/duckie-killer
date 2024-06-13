@@ -33,7 +33,10 @@ class Statehandler(Node):
         self.get_logger().info(f'Initial state set to: {self.curr_state}')
 
     def _objects_callback(self, msgs):
-
+        # if not msgs.objects:
+        #     self.get_logger().info("No objects received")
+        # return
+        
         obj_msg = msgs.objects[0]
         objects_msg = Objects()
         objects_msg.objects = [obj_msg]
