@@ -16,9 +16,28 @@ from mediapipe.tasks.python import vision
 
 import torch
 import numpy as np
+import logging
+import os
+import sys
+import io
+import contextlib
 
 
-# simple setup for gesture node
+def suppress_stderr():
+    sys.stderr.flush()
+    old_stderr = os.dup(2)
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    os.dup2(devnull, 2)
+    os.close(devnull)
+    return old_stderr
+
+def restore_stderr(old_stderr):
+    sys.stderr.flush()
+    os.dup2(old_stderr, 2)
+    os.close(old_stderr)
+
+
+
 class Gesture(Node):
     def __init__(self):
         super().__init__("gesture")
@@ -43,7 +62,7 @@ class Gesture(Node):
         object_msg.gesture = "Open_Palm"
         
         objects_msg = Objects()
-        objects_msg.objects = detected_objects
+        objects_msg.objects = [object_msg]
         self.publisher_.publish(objects_msg)
         self.get_logger().info(f'Published: {objects_msg}')
 
@@ -62,7 +81,13 @@ class Gesture(Node):
         mp_hands = mp.solutions.hands
         base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
         options = vision.GestureRecognizerOptions(base_options=base_options)
-        recognizer = vision.GestureRecognizer.create_from_options(options)
+        
+        old_stderr = suppress_stderr()
+        try:
+            recognizer = vision.GestureRecognizer.create_from_options(options)
+        finally:
+            restore_stderr(old_stderr)
+
 
         try:
             cv_image = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
@@ -94,9 +119,9 @@ class Gesture(Node):
                     object_msg.gesture = most_common_gesture
                     
                     objects_msg = Objects()
-                    objects_msg.objects = detected_objects
+                    objects_msg.objects = [object_msg]
                     self.publisher_.publish(objects_msg)
-                    self.get_logger().info(f'Published: {objects_msg}')
+                    self.get_logger().info(f'Published gesture: {objects_msg}')
                     self.current_gesture = most_common_gesture
         
         # Process detections            
@@ -122,7 +147,7 @@ class Gesture(Node):
             objects_msg = Objects()
             objects_msg.objects = detected_objects
             self.publisher_.publish(objects_msg)
-            self.get_logger().info(f'Published: {objects_msg}')
+            self.get_logger().info(f'Published object: {objects_msg}')
 
 
 def main(args=None):

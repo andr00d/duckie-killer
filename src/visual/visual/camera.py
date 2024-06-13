@@ -14,6 +14,7 @@ class Camera(Node):
         self.timer = self.create_timer((1/24), self._camera_callback)
         self.publisher_ = self.create_publisher(CompressedImage, "cam/compressed", 10)
         self.bridge = CvBridge()
+        # self.vid = cv2.VideoCapture(2) 
         self.vid = cv2.VideoCapture(0) 
 
     def _camera_callback(self):

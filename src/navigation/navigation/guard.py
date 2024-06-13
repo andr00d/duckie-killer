@@ -43,7 +43,7 @@ class Guard(Node):
     def move_robot(self, direction):
         twist = Twist()
         if direction == "stop":
-            twist.linear.x = 0.0
+            twist.linear.x = 0.5
             twist.angular.z = 0.0
         elif direction == "left":
             twist.linear.x = 0.0
