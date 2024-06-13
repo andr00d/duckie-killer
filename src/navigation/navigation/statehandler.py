@@ -33,8 +33,6 @@ class Statehandler(Node):
         self.get_logger().info(f'Initial state set to: {self.curr_state}')
 
     def _objects_callback(self, msgs):
-        if not msgs.objects:
-            return
 
         obj_msg = msgs.objects[0]
         objects_msg = Objects()
