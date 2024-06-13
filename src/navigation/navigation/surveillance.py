@@ -21,6 +21,7 @@ class SurveilState:
 
 pkg_dir = get_package_share_directory("navigation")
 sounds = [
+    # [%chance, pathfile], if rand < %chance, lowest chance file gets played. 
     [0.1, os.path.join(pkg_dir, "sounds/scream_1.mp3")],
     [1.0, os.path.join(pkg_dir, "sounds/scream_2.mp3")],
 ]
@@ -66,11 +67,6 @@ class Surveillance(Node):
             quaternion = [current_pos.orientation.x, current_pos.orientation.y, 
                           current_pos.orientation.z, current_pos.orientation.w]
             roll, pitch, yaw = euler_from_quaternion(quaternion)
-            # self.get_logger().info("{} - {}".format(yaw,  diff_angle))
-            # self.get_logger().info("dist = {} - {}".format(dist_x, dist_y))
-            # self.get_logger().info("pos = {} - {}".format( current_pos.position.x,  current_pos.position.y))
-            # self.get_logger().info("goal = {} - {}".format( goal_pos.position.x,  goal_pos.position.y))
-            # self.get_logger().info("{}: distance = {}".format(self.round_index, distance))
 
             if(abs(yaw - diff_angle) > .2):
                 # minimize rotation
@@ -88,8 +84,7 @@ class Surveillance(Node):
             return msg, False
 
     def _surveillance_callback(self, msgs):
-        # if message received consists out of a hand, it means state is switched, and we can reset surveillance state
-        if msgs.objects[0].type in ["hands"]:
+        if msgs.objects[0].gesture == "clear":
             self.round_index = 0
             self.state = SurveilState.STARTING
             self.get_logger().info("stopping surveillance.")
@@ -97,7 +92,6 @@ class Surveillance(Node):
 
         twist_msg = Twist()
         twist_msg.linear.x = 0.0
-        twist_msg.angular.y = 0.0 # not useful, remove in future
         twist_msg.angular.z = 0.0
 
         ######################################
@@ -127,8 +121,9 @@ class Surveillance(Node):
         ######################################
 
         if(self.state == SurveilState.PATROLLING):
-            cones = [m for m in msgs.objects if m.type == "cone"]
-            if len(cones) > 0:
+            people = [m for m in msgs.objects if m.type == "person"]
+            if len(people) > 0:
+                self.round_index = 0
                 self.state = SurveilState.FOLLOWING
                 self.get_logger().info("found target")
                 return
@@ -140,14 +135,14 @@ class Surveillance(Node):
         ######################################
 
         elif (self.state == SurveilState.FOLLOWING):
-            cones = [m for m in msgs.objects if m.type == "cone"]
-            if len(cones) == 0:
+            people = [m for m in msgs.objects if m.type == "person"]
+            if len(people) == 0:
                 self.state = SurveilState.RETURNING
                 self.get_logger().info("lost target, returning...")
                 return
 
-            cone = cones[0]
-            bb_area = cone.width * cone.height
+            person = max(people, key=lambda m: m.width * m.height)
+            bb_area = person.width * person.height
             if bb_area > self.MAX_BBOX_AREA:
                 self.state = SurveilState.BARKING
                 self.last_bark_time = time.time() - 3
@@ -163,8 +158,8 @@ class Surveillance(Node):
         ######################################
 
         elif (self.state == SurveilState.BARKING):
-            cones = [m for m in msgs.objects if m.type == "cone"]
-            if len(cones) == 0:
+            people = [m for m in msgs.objects if m.type == "person"]
+            if len(people) == 0:
                 self.state = SurveilState.RETURNING
                 self.get_logger().info("target removed, returning...")
                 return
@@ -180,12 +175,11 @@ class Surveillance(Node):
         ######################################
 
         elif (self.state == SurveilState.RETURNING):
-
             twist_msg, arrived = self._drive_to_pos(twist_msg, self.last_odom.pose.pose,  self.center_pos)
             if arrived:
-                self.state = SurveilState.FOLLOWING   
+                self.state = SurveilState.PATROLLING   
                 self.get_logger().info("returned to origin")       
-                retu
+                return
 
         ######################################
                 

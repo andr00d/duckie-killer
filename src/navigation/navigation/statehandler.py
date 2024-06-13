@@ -25,7 +25,7 @@ class Statehandler(Node):
 
         initial_msg = Objects()
         initial_object = Object()
-        initial_object.gesture = STOP
+        initial_object.gesture = "clear"
         initial_msg.objects = [initial_object]
         self.pub_surveillance.publish(initial_msg)
         self.pub_guard.publish(initial_msg)
