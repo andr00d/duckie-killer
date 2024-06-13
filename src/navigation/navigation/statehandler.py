@@ -32,11 +32,9 @@ class Statehandler(Node):
         self.pub_home.publish(initial_msg)
         self.get_logger().info(f'Initial state set to: {self.curr_state}')
 
-    def _objects_callback(self, msgs):
-        # if not msgs.objects:
-        #     self.get_logger().info("No objects received")
-        # return
-        
+    def _objects_callback(self, msgs):  
+        # TODO  this need to be handled with a try catch 
+        #       as msgs might be empty in some cases      
         obj_msg = msgs.objects[0]
         objects_msg = Objects()
         objects_msg.objects = [obj_msg]
