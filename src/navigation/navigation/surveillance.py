@@ -87,8 +87,9 @@ class Surveillance(Node):
         if msgs.objects[0].gesture == "clear":
             self.round_index = 0
             self.state = SurveilState.STARTING
-            self.get_logger().info("stopping surveillance.")
             return
+
+        self.get_logger().info(f'SURVEILLANCE')
 
         twist_msg = Twist()
         twist_msg.linear.x = 0.0

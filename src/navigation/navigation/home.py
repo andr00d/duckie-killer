@@ -28,23 +28,25 @@ class Home(Node):
         return 2 * normalized - 1
     
     def _home_callback(self, msg):
-        twist_msg = Twist()
-        
-        if not self.home_detected:
-            self.home_detected, self.home_bbox = self.find_home(msg.objects)
+        if msgs.objects[0].gesture != "clear":
+            self.get_logger().info(f'HOME')
+            twist_msg = Twist()
+            
             if not self.home_detected:
-                twist_msg.angular.z = self.normalize(0.5, -1, 1) # didn't find cone, spin in place look for it
-        else:
-            path_to_home_clear = self.check_path_to_home(msg.objects)
-            if path_to_home_clear:
-                twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
-                twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
-                twist_msg.angular.z = self.normalize(twist_msg.angular.z, -1, 1)
+                self.home_detected, self.home_bbox = self.find_home(msg.objects)
+                if not self.home_detected:
+                    twist_msg.angular.z = self.normalize(0.5, -1, 1) # didn't find cone, spin in place look for it
             else:
-                twist_msg.linear.x = 0.0
-                twist_msg.angular.z = 0.0
+                path_to_home_clear = self.check_path_to_home(msg.objects)
+                if path_to_home_clear:
+                    twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
+                    twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
+                    twist_msg.angular.z = self.normalize(twist_msg.angular.z, -1, 1)
+                else:
+                    twist_msg.linear.x = 0.0
+                    twist_msg.angular.z = 0.0
 
-        self.publisher_.publish(twist_msg)
+            self.publisher_.publish(twist_msg)
 
     def find_home(self, objects):
         for obj in objects:

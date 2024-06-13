@@ -20,7 +20,6 @@ import logging
 import os
 import sys
 import io
-import contextlib
 
 
 def suppress_stderr():
@@ -121,7 +120,7 @@ class Gesture(Node):
                     objects_msg = Objects()
                     objects_msg.objects = [object_msg]
                     self.publisher_.publish(objects_msg)
-                    self.get_logger().info(f'Published gesture: {objects_msg}')
+                    # self.get_logger().info(f'Published gesture: {objects_msg}')
                     self.current_gesture = most_common_gesture
         
         # Process detections            
@@ -147,7 +146,7 @@ class Gesture(Node):
             objects_msg = Objects()
             objects_msg.objects = detected_objects
             self.publisher_.publish(objects_msg)
-            self.get_logger().info(f'Published object: {objects_msg}')
+            # self.get_logger().info(f'Published object: {objects_msg}')
 
 
 def main(args=None):
