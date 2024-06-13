@@ -63,10 +63,10 @@ class Statehandler(Node):
             self.pub_surveillance.publish(msgs)
 
         if self.curr_state == GUARD:
-            self.pub_surveillance.publish(msgs)
+            self.pub_guard.publish(msgs)
 
         if self.curr_state == HOME:
-            self.pub_surveillance.publish(msgs)
+            self.pub_home.publish(msgs)
 
 def main(args=None):
     rclpy.init(args=args)

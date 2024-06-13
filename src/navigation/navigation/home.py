@@ -28,7 +28,7 @@ class Home(Node):
         return 2 * normalized - 1
     
     def _home_callback(self, msg):
-        if msgs.objects[0].gesture != "clear":
+        if msg.objects[0].gesture != "clear":
             self.get_logger().info(f'HOME')
             twist_msg = Twist()
             
