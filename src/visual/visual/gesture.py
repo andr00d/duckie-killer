@@ -41,7 +41,12 @@ class Gesture(Node):
         object_msg.height = 0.0
         object_msg.type = ""
         object_msg.gesture = "Open_Palm"
-        self.gesture_callback(object_msg)
+        
+        objects_msg = Objects()
+        objects_msg.objects = detected_objects
+        self.publisher_.publish(objects_msg)
+        self.get_logger().info(f'Published: {objects_msg}')
+
 
 
 
@@ -87,7 +92,11 @@ class Gesture(Node):
                     object_msg.height = 0.0
                     object_msg.type = ""
                     object_msg.gesture = most_common_gesture
-                    self.gesture_callback(object_msg)
+                    
+                    objects_msg = Objects()
+                    objects_msg.objects = detected_objects
+                    self.publisher_.publish(objects_msg)
+                    self.get_logger().info(f'Published: {objects_msg}')
                     self.current_gesture = most_common_gesture
         
         # Process detections            
