@@ -62,6 +62,7 @@ class Gesture(Node):
         try:
             cv_image = self.bridge.compressed_imgmsg_to_cv2(msg, "bgr8")
         except CvBridgeError as e:
+            self.get_logger().error("error with image/cv_bridge")
             return
 
         rgb_frame = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
@@ -99,47 +100,20 @@ class Gesture(Node):
                 x1, y1, x2, y2, confidence, class_id = detection
                 class_name = self.model.names[int(class_id)]
 
-                # Publish the object (no gestures)
-                if self.current_gesture == "Closed_Fist":  # Home
-                    if class_name == "chair":
-                        object_msg = Object()
-                        object_msg.x = float(x1)
-                        object_msg.y = float(y1)
-                        object_msg.width = float(x2-x1)
-                        object_msg.height = float(y2-y1)
-                        object_msg.type = class_name
-                        object_msg.gesture = ""
-                        self.gesture_callback(object_msg)
+                if class_name in ["chair", "person"]:
+                    object_msg = Object()
+                    object_msg.x = float(x1)
+                    object_msg.y = float(y1)
+                    object_msg.width = float(x2-x1)
+                    object_msg.height = float(y2-y1)
+                    object_msg.type = class_name
+                    object_msg.gesture = ""
+                    detected_objects.append(object_msg)
 
-                elif self.current_gesture == "Thumb_Up":  # Guard
-                    if class_name == "person":
-                        object_msg = Object()
-                        object_msg.x = float(x1)
-                        object_msg.y = float(y1)
-                        object_msg.width = float(x2-x1)
-                        object_msg.height = float(y2-y1)
-                        object_msg.type = class_name
-                        object_msg.gesture = ""
-                        self.gesture_callback(object_msg)
-
-
-                elif self.current_gesture == "Thumb_Down":  # Surveillance
-                    if class_name == "chair":
-                        object_msg = Object()
-                        object_msg.x = float(x1)
-                        object_msg.y = float(y1)
-                        object_msg.width = float(x2-x1)
-                        object_msg.height = float(y2-y1)
-                        object_msg.type = class_name
-                        object_msg.gesture = ""
-                        self.gesture_callback(object_msg)
-
-
-    def gesture_callback(self, object_msg):
-        objects_msg = Objects()
-        objects_msg.objects = [object_msg]
-        self.publisher_.publish(objects_msg)
-        self.get_logger().info(f'Published: {objects_msg}')
+            objects_msg = Objects()
+            objects_msg.objects = detected_objects
+            self.publisher_.publish(objects_msg)
+            self.get_logger().info(f'Published: {objects_msg}')
 
 
 def main(args=None):
