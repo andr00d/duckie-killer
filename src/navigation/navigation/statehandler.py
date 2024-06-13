@@ -21,7 +21,7 @@ class Statehandler(Node):
         self.pub_surveillance = self.create_publisher(Objects, "state_surveillance", 10)
         self.pub_guard = self.create_publisher(Objects, "state_guard", 10)
         self.pub_home = self.create_publisher(Objects, "state_home", 10)
-        self.curr_state = STOP
+        self.curr_state = None
 
         initial_msg = Objects()
         initial_object = Object()
@@ -40,7 +40,7 @@ class Statehandler(Node):
         objects_msg = Objects()
         objects_msg.objects = [obj_msg]
 
-        if obj_msg.gesture == STOP and self.curr_state != STOP:
+        if obj_msg.gesture == STOP and self.curr_state != None:
             obj_msg = Object(); 
             obj_msg.gesture = "clear"
             objects_msg.objects = [obj_msg]
@@ -51,17 +51,17 @@ class Statehandler(Node):
             self.get_logger().info("Transitioned to STOP mode")
         else:
             if obj_msg.gesture == SURV:
-                self.curr_state = SURV
-                self.pub_surveillance.publish(objects_msg)
+                self.curr_state = self.pub_surveillance
                 self.get_logger().info("Transitioned to SURVEILLANCE mode")
             elif obj_msg.gesture == GUARD:
-                self.curr_state = GUARD
-                self.pub_guard.publish(objects_msg)
+                self.curr_state = self.pub_guard
                 self.get_logger().info("Transitioned to GUARD mode")
             elif obj_msg.gesture == HOME:
-                self.curr_state = HOME
-                self.pub_home.publish(objects_msg)
+                self.curr_state = self.pub_home
                 self.get_logger().info("Transitioned to HOME mode")
+
+        if self.curr_state != None:
+            self.curr_state.publish(msgs)
 
 def main(args=None):
     rclpy.init(args=args)
