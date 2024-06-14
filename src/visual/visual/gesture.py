@@ -47,7 +47,7 @@ class Gesture(Node):
         self.publisher_ = self.create_publisher(Objects, "objects", 10)
 
         # TODO: check if this can be run on GPU as well (what if laptop running it doesnt have nvida?)
-        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', device='cpu')
+        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
         
         self.bridge = CvBridge()
         self.gesture_buffer = deque(maxlen=10)
@@ -128,7 +128,7 @@ class Gesture(Node):
             
             # Use YOLOv5 to detect objects
             results = self.model(cv_image)
-            for detection in results.xyxy[0].numpy():
+            for detection in results.xyxy[0].cpu().numpy():
                 x1, y1, x2, y2, confidence, class_id = detection
                 class_name = self.model.names[int(class_id)]
 

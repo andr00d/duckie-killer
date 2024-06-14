@@ -3,11 +3,15 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from interfaces.msg import Object, Objects
+from datetime import datetime
 
 from typing import Tuple
 import numpy as np
 
-HOME_CLASS_ID = 'person'
+# person to make debugging easier
+HOME_TYPE = 'person'
+bbox_min = 0.2
+bbox_max = 0.8
 
 class Home(Node):
     def __init__(self):
@@ -17,32 +21,41 @@ class Home(Node):
         self.home_detected = False
         self.home_bbox = None
         # PID controller variables
+        self.last_update = datetime.now()
         self.prev_e = 0.0
         self.prev_int = 0.0
-        self.delta_t = 0.0 # time delta between to callbacks [TBD]
+        self.delta_t = 0.0
 
     def normalize(self, value, min_value, max_value):
         normalized = (value - min_value) / (max_value - min_value)
         return 2 * normalized - 1
     
     def _home_callback(self, msg):
-        if len(msg.objects) > 0 and msg.objects[0].gesture != "clear":
+        if len(msg.objects) > 0 and msg.objects[0].gesture == "clear":
             self.home_detected = False
             return
 
+        curr_time = datetime.now()
+        delta = self.last_update - curr_time
+        self.delta_t = delta.seconds + delta.microseconds/1E6
+        self.last_update = curr_time
+
         twist_msg = Twist()
+        self.home_detected, self.home_bbox = self.find_home(msg.objects)
         
         if not self.home_detected:
-            self.home_detected, self.home_bbox = self.find_home(msg.objects)
+            self.get_logger().info("no home detected")
             if not self.home_detected:
                 twist_msg.angular.z = self.normalize(0.5, -1, 1) # didn't find cone, spin in place look for it
         else:
             path_to_home_clear = self.check_path_to_home(msg.objects)
             if path_to_home_clear:
+                self.get_logger().info("home path clear")
                 twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
                 twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
                 twist_msg.angular.z = self.normalize(twist_msg.angular.z, -1, 1)
             else:
+                self.get_logger().info("home path obstructed")
                 twist_msg.linear.x = 0.0
                 twist_msg.angular.z = 0.0
 
@@ -50,13 +63,13 @@ class Home(Node):
 
     def find_home(self, objects):
         for obj in objects:
-            if obj.type == HOME_CLASS_ID: # find cone
+            if obj.type == HOME_TYPE: # find home
                 return True, obj
         return False, None
 
     def check_path_to_home(self, objects):
         for obj in objects:
-            if obj.class_id != HOME_CLASS_ID and self.bbox_overlap(self.home_bbox, obj.bbox):
+            if obj.type != HOME_TYPE:  #and self.bbox_overlap(self.home_bbox, obj.bbox):
                 return False
         return True
 
@@ -69,7 +82,7 @@ class Home(Node):
         home_bbox_area = bbox.width * bbox.height
 
         # Safety mechanism: if bbox is too large, stop the robot
-        if home_bbox_area > 0.8:
+        if home_bbox_area > bbox_max:
             return 0.0, 0.0
 
         # Control the velocity based on the ratio
@@ -80,10 +93,10 @@ class Home(Node):
     def velocity_control(self, home_bbox_area, home_centerline, frame_centerline):
         bbox_to_screen_ratio = home_bbox_area
 
-        if bbox_to_screen_ratio < .2: # until the bbox is less then 20% of screen the speed is const
+        if bbox_to_screen_ratio < bbox_min: # until the bbox is less then 20% of screen the speed is const
             v_0 = 1.0  # Keep the velocity constant when the robot is far from home
-        elif .2 <= bbox_to_screen_ratio < .8:
-            v_0 = 1.0 - (bbox_to_screen_ratio - .2) / (.8 - .2)  # decrease vel prop. to the bbox ratio
+        elif .2 <= bbox_to_screen_ratio < bbox_max:
+            v_0 = 1.0 - (bbox_to_screen_ratio - bbox_min) / (bbox_max - bbox_min)  # decrease vel prop. to the bbox ratio
         else:
             v_0 = 0.0 
 
