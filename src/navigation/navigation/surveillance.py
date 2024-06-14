@@ -74,7 +74,7 @@ class Surveillance(Node):
                 if abs(yaw - diff_angle) < 1.9*np.pi:
                     if abs(yaw - diff_angle) > 1.5*np.pi:
                         rot_dir = -rot_dir
-                    msg.angular.z = 0.5 * rot_dir
+                    msg.angular.z = 0.9 * rot_dir
                     return msg, False
 
             if(distance < .15):

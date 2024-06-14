@@ -3,61 +3,40 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from interfaces.msg import Object, Objects
-
+import numpy as np
 
 class Guard(Node):
     def __init__(self):
         super().__init__("Gaurd")
         self.subscriber = self.create_subscription(Objects, 'state_guard', self._guard_callback, 10)
         self.publisher_ = self.create_publisher(Twist, "/rbt_vel", 10)
+        self.last_person_pos = np.array((0.5, 0.5))
+        self.MAX_BBOX_AREA = 0.4
 
     def _guard_callback(self, msg):
-        if len(msg.objects) > 0 and msg.objects[0].gesture != "clear":
-            person_detected = False
-            frame_width = 640  
-            frame_height = 480  
-            frame_center_x = frame_width / 2
-            
-            for detection in msg.objects:
-                x0,y0,width,height,class_id,gest = detection.x,detection.y,detection.width, detection.height, detection.type, detection.gesture
-                if class_id == 'person':  
-                    person_detected = True
-                    person_center_x = x0 + (width / 2)
+        if len(msg.objects) > 0 and msg.objects[0].gesture == "clear":
+            self.last_person_pos = np.array((0.5, 0.5))
+            return
 
+        people = [m for m in msg.objects if m.type == "person"]
+        if len(people) == 0:
+            return
 
-                    # Determine movement direction based on the person's position
-                    if width*height > frame_width * frame_height * 0.6:
-                        self.move_robot("stop")
-                    elif person_center_x < frame_center_x - 50:
-                        self.move_robot("left")
-                    elif person_center_x > frame_center_x + 50:
-                        self.move_robot("right")
-                    else:
-                        self.move_robot("forward")
+        # follow person nearest to last position. 
+        person = min(people, key=lambda m: np.linalg.norm(np.array((m.x, m.y)) - self.last_person_pos))
+        self.last_person_pos = np.array((person.x, person.y))
+        self.get_logger().info("following person with following info:")
+        self.get_logger().info("x:{:.3f}\ty:{:.3f}\tw:{:.3f}\th:{:.3f}".format(person.x, person.y, person.width, person.height))
 
-                    # Stop processing after the first person
-                    break
-
-            if not person_detected:
-                self.move_robot("stop")
-
-    def move_robot(self, direction):
-        twist = Twist()
-        if direction == "stop":
-            twist.linear.x = 0.0
-            twist.angular.z = 0.0
-        elif direction == "left":
-            twist.linear.x = 0.0
-            twist.angular.z = 0.5
-        elif direction == "right":
-            twist.linear.x = 0.0
-            twist.angular.z = -0.5
-        elif direction == "forward":
-            twist.linear.x = 0.5
-            twist.angular.z = 0.0
-
-        self.publisher_.publish(twist)
-        self.get_logger().info(f'Moving robot: {direction}')
+        bb_area = person.width * person.height
+        if bb_area < self.MAX_BBOX_AREA:
+            twist_msg = Twist() 
+            center = person.x + person.width/2
+            x_norm = -2 * (center - 0.5)
+            twist_msg.angular.z = x_norm
+            # TODO: rotation can be a bit better
+            twist_msg.linear.x = 1.0 * (1.0 - abs(x_norm)**2)
+            self.publisher_.publish(twist_msg)
 
 def main(args=None):
     rclpy.init(args=args)

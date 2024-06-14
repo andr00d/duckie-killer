@@ -97,6 +97,7 @@ class Gesture(Node):
 
         rgb_frame = cv2.cvtColor(cv_image, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+        height, width = rgb_frame.shape[:2]
 
         recognition_result = recognizer.recognize(mp_image)
         detected_objects = []
@@ -133,10 +134,10 @@ class Gesture(Node):
 
                 if class_name in ["chair", "person"]:
                     object_msg = Object()
-                    object_msg.x = float(x1)
-                    object_msg.y = float(y1)
-                    object_msg.width = float(x2-x1)
-                    object_msg.height = float(y2-y1)
+                    object_msg.x = float(x1) / width
+                    object_msg.y = float(y1) / height
+                    object_msg.width = float(x2-x1) / width
+                    object_msg.height = float(y2-y1) / height
                     object_msg.type = class_name
                     object_msg.gesture = ""
                     detected_objects.append(object_msg)
