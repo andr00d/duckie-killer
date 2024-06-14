@@ -32,33 +32,33 @@ class Statehandler(Node):
         self.pub_home.publish(initial_msg)
         self.get_logger().info(f'Initial state set to: {self.curr_state}')
 
-    def _objects_callback(self, msgs):  
-        # TODO  this need to be handled with a try catch 
-        #       as msgs might be empty in some cases      
-        obj_msg = msgs.objects[0]
-        objects_msg = Objects()
-        objects_msg.objects = [obj_msg]
-
-        if obj_msg.gesture == STOP:
-            self.get_logger().info(f'{obj_msg.gesture}    {self.curr_state}')
-            obj_msg = Object(); 
-            obj_msg.gesture = "clear"
+    # function expects the first message to be the gesture if one is sent. 
+    def _objects_callback(self, msgs): 
+        if len(msgs.objects) > 0:    
+            obj_msg = msgs.objects[0]
+            objects_msg = Objects()
             objects_msg.objects = [obj_msg]
-            self.pub_surveillance.publish(objects_msg)
-            self.pub_guard.publish(objects_msg)
-            self.pub_home.publish(objects_msg)
-            self.curr_state = STOP
-            self.get_logger().info("Transitioned to STOP mode")
-        else:
-            if obj_msg.gesture == SURV:
-                self.curr_state = SURV
-                self.get_logger().info("Transitioned to SURVEILLANCE mode")
-            elif obj_msg.gesture == GUARD:
-                self.curr_state = GUARD
-                self.get_logger().info("Transitioned to GUARD mode")
-            elif obj_msg.gesture == HOME:
-                self.curr_state = HOME
-                self.get_logger().info("Transitioned to HOME mode")
+
+            if obj_msg.gesture == STOP and self.curr_state != STOP:
+                self.get_logger().info(f'{obj_msg.gesture}    {self.curr_state}')
+                obj_msg = Object(); 
+                obj_msg.gesture = "clear"
+                objects_msg.objects = [obj_msg]
+                self.pub_surveillance.publish(objects_msg)
+                self.pub_guard.publish(objects_msg)
+                self.pub_home.publish(objects_msg)
+                self.curr_state = STOP
+                self.get_logger().info("Transitioned to STOP mode")
+            else:
+                if obj_msg.gesture == SURV and self.curr_state != SURV:
+                    self.curr_state = SURV
+                    self.get_logger().info("Transitioned to SURVEILLANCE mode")
+                elif obj_msg.gesture == GUARD and self.curr_state != GUARD:
+                    self.curr_state = GUARD
+                    self.get_logger().info("Transitioned to GUARD mode")
+                elif obj_msg.gesture == HOME and self.curr_state != HOME:
+                    self.curr_state = HOME
+                    self.get_logger().info("Transitioned to HOME mode")
 
         if self.curr_state == SURV:
             self.pub_surveillance.publish(msgs)

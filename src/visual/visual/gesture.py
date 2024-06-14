@@ -46,7 +46,8 @@ class Gesture(Node):
         self.subscription = self.create_subscription(CompressedImage, "cam/compressed", self._cam_callback, 10)
         self.publisher_ = self.create_publisher(Objects, "objects", 10)
 
-        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+        # TODO: check if this can be run on GPU as well (what if laptop running it doesnt have nvida?)
+        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', device='cpu')
         
         self.bridge = CvBridge()
         self.gesture_buffer = deque(maxlen=10)
@@ -98,6 +99,7 @@ class Gesture(Node):
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
         recognition_result = recognizer.recognize(mp_image)
+        detected_objects = []
 
         # Process gestures
         if recognition_result.gestures:
@@ -116,19 +118,15 @@ class Gesture(Node):
                     object_msg.height = 0.0
                     object_msg.type = ""
                     object_msg.gesture = most_common_gesture
-                    
-                    objects_msg = Objects()
-                    objects_msg.objects = [object_msg]
-                    self.publisher_.publish(objects_msg)
-                    # self.get_logger().info(f'Published gesture: {objects_msg}')
+                    detected_objects.append(object_msg)
+
                     self.current_gesture = most_common_gesture
         
         # Process detections            
-        elif self.current_gesture != "Open_Palm":
+        if self.current_gesture != "Open_Palm":
             
             # Use YOLOv5 to detect objects
             results = self.model(cv_image)
-            detected_objects = []
             for detection in results.xyxy[0].numpy():
                 x1, y1, x2, y2, confidence, class_id = detection
                 class_name = self.model.names[int(class_id)]
@@ -143,10 +141,10 @@ class Gesture(Node):
                     object_msg.gesture = ""
                     detected_objects.append(object_msg)
 
-            objects_msg = Objects()
-            objects_msg.objects = detected_objects
-            self.publisher_.publish(objects_msg)
-            # self.get_logger().info(f'Published object: {objects_msg}')
+        objects_msg = Objects()
+        objects_msg.objects = detected_objects
+        self.publisher_.publish(objects_msg)
+        # self.get_logger().info(f'Published object: {objects_msg}')
 
 
 def main(args=None):

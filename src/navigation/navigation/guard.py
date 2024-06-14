@@ -12,8 +12,7 @@ class Guard(Node):
         self.publisher_ = self.create_publisher(Twist, "/rbt_vel", 10)
 
     def _guard_callback(self, msg):
-        if msg.objects[0].gesture != "clear":
-            self.get_logger().info(f'GUARDING')
+        if len(msg.objects) > 0 and msg.objects[0].gesture != "clear":
             person_detected = False
             frame_width = 640  
             frame_height = 480  

@@ -84,12 +84,10 @@ class Surveillance(Node):
             return msg, False
 
     def _surveillance_callback(self, msgs):
-        if msgs.objects[0].gesture == "clear":
+        if len(msgs.objects) > 0 and msgs.objects[0].gesture == "clear":
             self.round_index = 0
             self.state = SurveilState.STARTING
             return
-
-        self.get_logger().info(f'SURVEILLANCE')
 
         twist_msg = Twist()
         twist_msg.linear.x = 0.0
@@ -148,7 +146,7 @@ class Surveillance(Node):
                 self.state = SurveilState.BARKING
                 self.last_bark_time = time.time() - 3
                 self.get_logger().info("arrive at target, barking.")
-                self.last_bark_time = time.time()
+                # self.last_bark_time = time.time()
                 return
 
             center = x + w / 2.0
