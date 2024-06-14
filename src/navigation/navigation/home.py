@@ -7,9 +7,7 @@ from interfaces.msg import Object, Objects
 from typing import Tuple
 import numpy as np
 
-HOME_CLASS_ID = 'cone barrel'
-FRAME_WIDTH = 160 # [TBD] fix it
-FRAME_HEIGHT = 160 # [TBD] fix it
+HOME_CLASS_ID = 'person'
 
 class Home(Node):
     def __init__(self):
@@ -29,23 +27,26 @@ class Home(Node):
     
     def _home_callback(self, msg):
         if len(msg.objects) > 0 and msg.objects[0].gesture != "clear":
-            twist_msg = Twist()
-            
-            if not self.home_detected:
-                self.home_detected, self.home_bbox = self.find_home(msg.objects)
-                if not self.home_detected:
-                    twist_msg.angular.z = self.normalize(0.5, -1, 1) # didn't find cone, spin in place look for it
-            else:
-                path_to_home_clear = self.check_path_to_home(msg.objects)
-                if path_to_home_clear:
-                    twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
-                    twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
-                    twist_msg.angular.z = self.normalize(twist_msg.angular.z, -1, 1)
-                else:
-                    twist_msg.linear.x = 0.0
-                    twist_msg.angular.z = 0.0
+            self.home_detected = False
+            return
 
-            self.publisher_.publish(twist_msg)
+        twist_msg = Twist()
+        
+        if not self.home_detected:
+            self.home_detected, self.home_bbox = self.find_home(msg.objects)
+            if not self.home_detected:
+                twist_msg.angular.z = self.normalize(0.5, -1, 1) # didn't find cone, spin in place look for it
+        else:
+            path_to_home_clear = self.check_path_to_home(msg.objects)
+            if path_to_home_clear:
+                twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
+                twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
+                twist_msg.angular.z = self.normalize(twist_msg.angular.z, -1, 1)
+            else:
+                twist_msg.linear.x = 0.0
+                twist_msg.angular.z = 0.0
+
+        self.publisher_.publish(twist_msg)
 
     def find_home(self, objects):
         for obj in objects:
@@ -62,23 +63,22 @@ class Home(Node):
     def centerline_allignment(self, bbox):
         # calculate the centerline allignment
         home_centerline = bbox.x + bbox.width / 2
-        frame_centerline = FRAME_WIDTH / 2
+        frame_centerline = 0.5
 
         # Calculate the area of the home_bbox
         home_bbox_area = bbox.width * bbox.height
-        frame_area = FRAME_WIDTH * FRAME_HEIGHT
 
         # Safety mechanism: if bbox is too large, stop the robot
-        if home_bbox_area / frame_area > 0.8:
+        if home_bbox_area > 0.8:
             return 0.0, 0.0
 
         # Control the velocity based on the ratio
-        v_0, omega = self.velocity_control(home_bbox_area, frame_area, home_centerline, frame_centerline)
+        v_0, omega = self.velocity_control(home_bbox_area, home_centerline, frame_centerline)
 
         return v_0, omega
 
-    def velocity_control(self, home_bbox_area, frame_area, home_centerline, frame_centerline):
-        bbox_to_screen_ratio = home_bbox_area / frame_area
+    def velocity_control(self, home_bbox_area, home_centerline, frame_centerline):
+        bbox_to_screen_ratio = home_bbox_area
 
         if bbox_to_screen_ratio < .2: # until the bbox is less then 20% of screen the speed is const
             v_0 = 1.0  # Keep the velocity constant when the robot is far from home
