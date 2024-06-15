@@ -74,13 +74,13 @@ class Surveillance(Node):
                 if abs(yaw - diff_angle) < 1.9*np.pi:
                     if abs(yaw - diff_angle) > 1.5*np.pi:
                         rot_dir = -rot_dir
-                    msg.angular.z = 0.9 * rot_dir
+                    msg.angular.z = 1.5 * rot_dir
                     return msg, False
 
             if(distance < .15):
                 return msg, True
 
-            msg.linear.x = 0.6
+            msg.linear.x = 0.75
             return msg, False
 
     def _surveillance_callback(self, msgs):
@@ -146,12 +146,11 @@ class Surveillance(Node):
                 self.state = SurveilState.BARKING
                 self.last_bark_time = time.time() - 3
                 self.get_logger().info("arrive at target, barking.")
-                # self.last_bark_time = time.time()
                 return
 
-            center = x + w / 2.0
+            center = perosn.x + person.width / 2.0
             x_norm = -2 * (center - 0.5)
-            twist_msg.angular.z = x_norm
+            twist_msg.angular.z = 1.25 * x_norm
             twist_msg.linear.x = 1.0 * (1.0 - abs(x_norm))
             
         ######################################

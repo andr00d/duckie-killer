@@ -53,7 +53,7 @@ class Home(Node):
                 self.get_logger().info("home path clear")
                 twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
                 twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
-                twist_msg.angular.z = self.normalize(twist_msg.angular.z, -2.0, 2.0)
+                twist_msg.angular.z = -self.normalize(twist_msg.angular.z, -2.0, 2.0)
             else:
                 self.get_logger().info("home path obstructed")
                 twist_msg.linear.x = 0.0
