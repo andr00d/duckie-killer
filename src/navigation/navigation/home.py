@@ -11,7 +11,7 @@ import numpy as np
 # person to make debugging easier
 HOME_TYPE = 'person'
 bbox_min = 0.2
-bbox_max = 0.8
+bbox_max = 0.5
 
 class Home(Node):
     def __init__(self):
@@ -46,14 +46,14 @@ class Home(Node):
         if not self.home_detected:
             self.get_logger().info("no home detected")
             if not self.home_detected:
-                twist_msg.angular.z = self.normalize(0.5, -1, 1) # didn't find cone, spin in place look for it
+                twist_msg.angular.z = 1.0  # didn't find cone, spin in place look for it
         else:
             path_to_home_clear = self.check_path_to_home(msg.objects)
             if path_to_home_clear:
                 self.get_logger().info("home path clear")
                 twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
                 twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
-                twist_msg.angular.z = self.normalize(twist_msg.angular.z, -1, 1)
+                twist_msg.angular.z = self.normalize(twist_msg.angular.z, -2.0, 2.0)
             else:
                 self.get_logger().info("home path obstructed")
                 twist_msg.linear.x = 0.0

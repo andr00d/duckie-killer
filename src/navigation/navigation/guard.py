@@ -33,9 +33,9 @@ class Guard(Node):
             twist_msg = Twist() 
             center = person.x + person.width/2
             x_norm = -2 * (center - 0.5)
-            twist_msg.angular.z = x_norm
             # TODO: rotation can be a bit better
-            twist_msg.linear.x = 1.0 * (1.0 - abs(x_norm)**2)
+            twist_msg.linear.x = 1.0 * (1.0 - abs(x_norm))
+            twist_msg.angular.z = 2 * x_norm**2
             self.publisher_.publish(twist_msg)
 
 def main(args=None):
