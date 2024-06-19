@@ -12,6 +12,6 @@ def generate_launch_description():
     return LaunchDescription(
         [
             Node(package="visual", executable="camera", output="screen"),
-            Node(package="visual", executable="decomp_test", output="screen"),
+            # Node(package="visual", executable="decomp_test", output="screen"),
         ]
     )

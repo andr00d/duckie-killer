@@ -9,7 +9,7 @@ from typing import Tuple
 import numpy as np
 
 # person to make debugging easier
-HOME_TYPE = 'person'
+HOME_TYPE = 'chair'
 bbox_min = 0.2
 bbox_max = 0.5
 
@@ -46,18 +46,18 @@ class Home(Node):
         if not self.home_detected:
             self.get_logger().info("no home detected")
             if not self.home_detected:
-                twist_msg.angular.z = 1.0  # didn't find cone, spin in place look for it
+                twist_msg.angular.z = 0.6  # didn't find cone, spin in place look for it
         else:
-            path_to_home_clear = self.check_path_to_home(msg.objects)
-            if path_to_home_clear:
+            # path_to_home_clear = self.check_path_to_home(msg.objects)
+            # if path_to_home_clear:
                 self.get_logger().info("home path clear")
                 twist_msg.linear.x, twist_msg.angular.z = self.centerline_allignment(self.home_bbox)
                 twist_msg.linear.x = self.normalize(twist_msg.linear.x, -1, 1)
-                twist_msg.angular.z = -self.normalize(twist_msg.angular.z, -2.0, 2.0)
-            else:
-                self.get_logger().info("home path obstructed")
-                twist_msg.linear.x = 0.0
-                twist_msg.angular.z = 0.0
+                twist_msg.angular.z = -self.normalize(twist_msg.angular.z, -2.5, 2.5)
+            # else:
+            #     self.get_logger().info("home path obstructed")
+            #     twist_msg.linear.x = 0.0
+            #     twist_msg.angular.z = 0.0
 
         self.publisher_.publish(twist_msg)
 
@@ -94,9 +94,9 @@ class Home(Node):
         bbox_to_screen_ratio = home_bbox_area
 
         if bbox_to_screen_ratio < bbox_min: # until the bbox is less then 20% of screen the speed is const
-            v_0 = 1.0  # Keep the velocity constant when the robot is far from home
+            v_0 = 0.6  # Keep the velocity constant when the robot is far from home
         elif .2 <= bbox_to_screen_ratio < bbox_max:
-            v_0 = 1.0 - (bbox_to_screen_ratio - bbox_min) / (bbox_max - bbox_min)  # decrease vel prop. to the bbox ratio
+            v_0 = (1.0 - (bbox_to_screen_ratio - bbox_min) / (bbox_max - bbox_min)) * 0.4  # decrease vel prop. to the bbox ratio
         else:
             v_0 = 0.0 
 
@@ -130,7 +130,7 @@ class Home(Node):
         # Anti-windup:
         e_int = max(min(e_int, 2), -2)
     
-        k_p = 5
+        k_p = 2.0
         k_i = 0.2
         k_d = 0.1
     
