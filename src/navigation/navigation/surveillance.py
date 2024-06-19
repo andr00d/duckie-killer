@@ -47,12 +47,18 @@ class Surveillance(Node):
         self.bark_delay = (self.get_parameter("bark_delay").get_parameter_value().integer_value)
         self.move_radius = (self.get_parameter("move_radius").get_parameter_value().double_value)
         self.last_bark_time = time.time()
-        self.MAX_BBOX_AREA = 0.1
+        self.MAX_BBOX_AREA = 0.5
         
         self.state = SurveilState.STARTING
         self.round_index = 0
         self.last_odom = Odometry()
         self.center_pos = Pose()
+
+        test1 = np.arctan2(np.sin(np.pi - (-0.9 * np.pi)), np.cos(np.pi - (-0.9 * np.pi)))
+        test2 = np.arctan2(np.sin(np.pi + 0.01), np.cos(np.pi + 0.01))
+
+        self.get_logger().info("{}".format(test1/np.pi))
+        self.get_logger().info("{}".format(test2/np.pi))
         
     def _odom_callback(self, msg):
         self.last_odom = msg
@@ -62,25 +68,26 @@ class Surveillance(Node):
             dist_y = goal_pos.position.y - current_pos.position.y
             distance = np.hypot(dist_x, dist_y)
 
-            diff_angle = np.arctan2(dist_y, dist_x)
+            goal_angle = np.arctan2(dist_y, dist_x)
 
             quaternion = [current_pos.orientation.x, current_pos.orientation.y, 
                           current_pos.orientation.z, current_pos.orientation.w]
-            roll, pitch, yaw = euler_from_quaternion(quaternion)
+            roll, pitch, curr_angle = euler_from_quaternion(quaternion)
 
-            if(abs(yaw - diff_angle) > .2):
-                # minimize rotation
-                rot_dir = (diff_angle - yaw) / abs((diff_angle - yaw))
-                if abs(yaw - diff_angle) < 1.9*np.pi:
-                    if abs(yaw - diff_angle) > 1.5*np.pi:
-                        rot_dir = -rot_dir
-                    msg.angular.z = 1.5 * rot_dir
-                    return msg, False
+            shallow_angle = np.arctan2(np.sin(goal_angle-curr_angle), np.cos(goal_angle-curr_angle))
+            msg.angular.z = 2.0 * (shallow_angle/np.pi)
+            
 
-            if(distance < .15):
+            if(distance < .25):
                 return msg, True
+            else:
+                msg.linear.x = 1.0 * (1.0 - abs(shallow_angle / np.pi)**0.3)
 
-            msg.linear.x = 0.75
+            self.get_logger().info("{} - {}".format(msg.angular.z, msg.linear.x))
+            self.get_logger().info("{} - {}".format(goal_angle, curr_angle))
+            self.get_logger().info("{} - {}".format(goal_angle, distance))
+            self.get_logger().info("###############")
+            
             return msg, False
 
     def _surveillance_callback(self, msgs):
@@ -136,7 +143,7 @@ class Surveillance(Node):
         elif (self.state == SurveilState.FOLLOWING):
             people = [m for m in msgs.objects if m.type == "person"]
             if len(people) == 0:
-                self.state = SurveilState.RETURNING
+                self.state = SurveilState.PATROLLING
                 self.get_logger().info("lost target, returning...")
                 return
 
@@ -148,7 +155,7 @@ class Surveillance(Node):
                 self.get_logger().info("arrive at target, barking.")
                 return
 
-            center = perosn.x + person.width / 2.0
+            center = person.x + person.width / 2.0
             x_norm = -2 * (center - 0.5)
             twist_msg.angular.z = 1.25 * x_norm
             twist_msg.linear.x = 1.0 * (1.0 - abs(x_norm))
@@ -158,7 +165,7 @@ class Surveillance(Node):
         elif (self.state == SurveilState.BARKING):
             people = [m for m in msgs.objects if m.type == "person"]
             if len(people) == 0:
-                self.state = SurveilState.RETURNING
+                self.state = SurveilState.PATROLLING
                 self.get_logger().info("target removed, returning...")
                 return
 

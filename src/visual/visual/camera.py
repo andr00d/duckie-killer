@@ -22,7 +22,9 @@ class Camera(Node):
         
         if(ret):
             self.publisher_.publish(self.bridge.cv2_to_compressed_imgmsg(frame, dst_format = "jpg"))
-            
+        else:
+            self.get_logger().error("error with getting camera frame")
+
 
 
 def main(args=None):
