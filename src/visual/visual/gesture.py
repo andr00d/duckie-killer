@@ -18,6 +18,7 @@ import logging
 import os
 import sys
 import threading
+import concurrent.futures
 
 
 class Gesture(Node):
@@ -32,16 +33,16 @@ class Gesture(Node):
             self.device = torch.device('mps')
         else:
             self.device = torch.device('cpu')
-            
+
         self.get_logger().info(f'Using device: {self.device}')
 
-        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5n').to(self.device)  
+        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5n').to(self.device)
 
         self.bridge = CvBridge()
         self.gesture_buffer = deque(maxlen=10)
         self.current_gesture = "Open_Palm"
 
-        self.frame_skip = 2  
+        self.frame_skip = 2
         self.frame_count = 0
 
         base_options = python.BaseOptions(model_asset_path='gesture_recognizer.task')
@@ -52,6 +53,9 @@ class Gesture(Node):
         self.latest_frame = None
         self.latest_frame_lock = threading.Lock()
 
+        num_workers = os.cpu_count()
+        self.thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=num_workers)
+
         self.display_thread = threading.Thread(target=self.display_frames)
         self.display_thread.daemon = True
         self.display_thread.start()
@@ -60,7 +64,7 @@ class Gesture(Node):
         self.detection_thread.daemon = True
         self.detection_thread.start()
 
-        self.latest_detections = []  
+        self.latest_detections = []
         self.latest_detections_lock = threading.Lock()
 
     def _cam_callback(self, msg):
@@ -73,7 +77,7 @@ class Gesture(Node):
         if frame is not None:
             with self.latest_frame_lock:
                 self.latest_frame = frame
-            threading.Thread(target=self.process_gestures, args=(frame,)).start()
+            self.thread_pool.submit(self.process_gestures, frame)
 
     def process_gestures(self, frame):
         try:
@@ -119,7 +123,7 @@ class Gesture(Node):
 
     def run_detection(self):
         while True:
-            time.sleep(0.25)  
+            time.sleep(0.25)
             with self.latest_frame_lock:
                 if self.latest_frame is not None:
                     frame = self.latest_frame.copy()
@@ -155,7 +159,7 @@ class Gesture(Node):
                     detected_objects.append(object_msg)
 
             with self.latest_detections_lock:
-                self.latest_detections = detected_objects  
+                self.latest_detections = detected_objects
 
             objects_msg = Objects()
             objects_msg.objects = detected_objects
