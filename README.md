@@ -1,5 +1,5 @@
 # duckie-killer
-5LIA0 project
+repo for the 5LIA0 project, using a rover robotics robot to control a robot using gestures. 
 
 ## Setup
 Please download and place the repository in `~/GIT/duckie-killer/`. If located elsewhere, it is advisable to move the folder accordingly.
@@ -25,6 +25,9 @@ Upon initial download of the repository, execute `colcon build` in `~/GIT/duckie
 Add `source ~/GIT/duckie-killer/install/setup.bash` to your `.bashrc` file. If you prefer to avoid the impact on terminal initialization time, you can omit this and instead execute `source sources.sh` in each new window used for ROS2, enhancing terminal responsiveness.
 
 To provide the program with access to GPS devices, add your user to the necessary groups with the following commands:
+
+### network
+If ufw is enabled it prevents ROS2 from communicating between devices, we haven't looked at what ports to open to make it work, so for now ```sudo ufw disable``` works well enough. it goes without saying that this should only be done on a network without internet connection. 
 
 ## Building and Running
 Use `colcon build` in the workspace directory to build the project. then run `source sources.sh` to update the executables. 
